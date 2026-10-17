@@ -30,7 +30,7 @@ class Slots {
 
     private const ICON_HEIGHT = 26;
     private const ICON_GAP = 5;     // space between icon and text
-    private const LINE_HEIGHT = 18; // text line pitch in the small font
+    private const LINE_HEIGHT = 22; // text line pitch in the small font
 
     private var _iconFont as FontResource;
     private var _textFont as FontResource;
@@ -67,23 +67,38 @@ class Slots {
         Complications.registerComplicationChangeCallback(method(:onComplicationChanged));
         Complications.unsubscribeFromAllUpdates();
         _raw = {} as Dictionary<Number, Object?>;
+        var types = [] as Array<Complications.Type>;
         for (var i = 0; i < 4; i++) {
-            var types = complicationTypes(Settings.slots[i]);
-            for (var t = 0; t < types.size(); t++) {
-                var type = types[t];
-                if (_raw.hasKey(type)) {
-                    continue;
-                }
-                var id = new Complications.Id(type);
-                try {
-                    _raw[type] = Complications.getComplication(id).value;
-                    Complications.subscribeToUpdates(id);
-                } catch (e) {
-                    _raw[type] = null;
-                }
+            types.addAll(complicationTypes(Settings.slots[i]));
+        }
+        if (Settings.showSun) {
+            // The 12 o'clock sun arc shares the callback with the slots
+            types.addAll(complicationTypes(Settings.SLOT_SUN));
+        }
+        for (var t = 0; t < types.size(); t++) {
+            var type = types[t];
+            if (_raw.hasKey(type)) {
+                continue;
+            }
+            var id = new Complications.Id(type);
+            try {
+                _raw[type] = Complications.getComplication(id).value;
+                Complications.subscribeToUpdates(id);
+            } catch (e) {
+                _raw[type] = null;
             }
         }
         refresh();
+    }
+
+    //! Today's [sunrise, sunset] in seconds since local midnight, or null if unknown.
+    function sunTimes() as [Number, Number]? {
+        var rise = rawNumber(Complications.COMPLICATION_TYPE_SUNRISE);
+        var set = rawNumber(Complications.COMPLICATION_TYPE_SUNSET);
+        if (rise == null || set == null) {
+            return null;
+        }
+        return [rise.toNumber(), set.toNumber()];
     }
 
     function unsubscribe() as Void {
@@ -102,6 +117,9 @@ class Slots {
             if (complicationTypes(Settings.slots[i]).indexOf(type) >= 0) {
                 format(i);
             }
+        }
+        if (Settings.showSun && (type == Complications.COMPLICATION_TYPE_SUNRISE || type == Complications.COMPLICATION_TYPE_SUNSET)) {
+            dirty = true;
         }
     }
 
@@ -355,16 +373,19 @@ class Slots {
 
     //! Next sunrise or sunset as a clock time.
     private function formatSun() as String {
-        var rise = rawNumber(Complications.COMPLICATION_TYPE_SUNRISE);
-        var set = rawNumber(Complications.COMPLICATION_TYPE_SUNSET);
-        if (rise == null || set == null) {
+        var sun = sunTimes();
+        if (sun == null) {
             return "--";
         }
         var t = System.getClockTime();
         var now = t.hour * 3600 + t.min * 60;
-        var next = ((now >= rise && now < set) ? set : rise).toNumber();
-        var h = next / 3600;
-        var m = (next % 3600) / 60;
+        return formatClock((now >= sun[0] && now < sun[1]) ? sun[1] : sun[0]);
+    }
+
+    //! Seconds since midnight as "H:MM", honoring the 12/24h setting.
+    static function formatClock(secs as Number) as String {
+        var h = secs / 3600;
+        var m = (secs % 3600) / 60;
         if (!System.getDeviceSettings().is24Hour) {
             h = h % 12;
             if (h == 0) {

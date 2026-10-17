@@ -22,9 +22,9 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "resources", "fonts")
 
-NUMERAL_SIZE = 32  # px, font size of the dial numerals
+NUMERAL_SIZE = 38  # px, font size of the dial numerals
 NUMERAL_GAP = 2  # px between digits of "10", "11", "12"
-SMALL_SIZE = 19  # px, font size of the slot text
+SMALL_SIZE = 23  # px, font size of the slot text
 ICON_SIZE = 26  # px, icon cell
 SUPERSAMPLE = 8
 

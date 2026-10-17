@@ -44,7 +44,7 @@ module Settings {
     var accentIndex as Number = 0;
     var showArcs as Boolean = false;
     var showBattery as Boolean = true;
-    var showMoon as Boolean = true;
+    var showSun as Boolean = true;
 
     function load() as Void {
         for (var i = 0; i < 4; i++) {
@@ -58,7 +58,7 @@ module Settings {
         }
         showArcs = readBoolean("ShowArcs", false);
         showBattery = readBoolean("ShowBattery", true);
-        showMoon = readBoolean("ShowMoon", true);
+        showSun = readBoolean("ShowSun", true);
     }
 
     function accent() as Number {

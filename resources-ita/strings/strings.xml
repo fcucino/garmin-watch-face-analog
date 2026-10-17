@@ -8,7 +8,7 @@
     <string id="AccentColorTitle">Colore accento</string>
     <string id="ShowArcsTitle">Archi di progresso</string>
     <string id="ShowBatteryTitle">Batteria ore 6</string>
-    <string id="ShowMoonTitle">Fase lunare ore 12</string>
+    <string id="ShowSunTitle">Alba / tramonto ore 12</string>
     <string id="SettingsTitle">Impostazioni</string>
     <string id="SlotNone">Nessuno</string>
     <string id="SlotDate">Data</string>

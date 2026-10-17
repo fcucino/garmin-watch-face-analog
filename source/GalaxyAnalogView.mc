@@ -11,7 +11,7 @@ import Toybox.WatchUi;
 //! a minute, or once a second in high power for a few seconds after a gesture:
 //! - The dial, slots and indicators live in one off-screen background that
 //!   is redrawn only when something on it visibly changes (slot value,
-//!   battery level, day/moon, settings). On a normal minute it is untouched.
+//!   battery level, sun arc step, settings). On a normal minute it is untouched.
 //! - Every onUpdate is one bitmap blit plus the hour/minute hands, plus the
 //!   second hand in high power when enabled.
 //! - Always-on mode draws a sparse outline face (<10% lit pixels) once per
@@ -34,7 +34,8 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
     private var _bgDirty as Boolean = true;
     private var _day as Number = -1;
     private var _battery as Number = -1;
-    private var _moonPhase as Float = 0.0;
+    private var _sunStep as Number = -2;
+    private var _sunNow as Number = 0;
 
     function initialize() {
         WatchFace.initialize();
@@ -128,10 +129,20 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         var newDay = day != _day;
         if (newDay) {
             _day = day;
-            _moonPhase = Indicators.moonPhase(Time.now().value());
-            _bgDirty = true;
         }
         _slots.poll(newDay);
+
+        // Sun arc: redraw only when the dot moves to the next step or day/night flips
+        var t = System.getClockTime();
+        _sunNow = t.hour * 3600 + t.min * 60;
+        var sun = _slots.sunTimes();
+        var step = sun != null ? Indicators.sunStep(sun[0], sun[1], _sunNow) : -2;
+        if (step != _sunStep) {
+            _sunStep = step;
+            if (Settings.showSun) {
+                _bgDirty = true;
+            }
+        }
 
         var battery = (System.getSystemStats().battery + 0.5).toNumber();
         if (battery != _battery) {
@@ -156,8 +167,9 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         _dial.draw(dc);
 
         var indicatorOffset = (_size * 0.30).toNumber();
-        if (Settings.showMoon) {
-            Indicators.drawMoon(dc, _c, _c - indicatorOffset, (_size * 0.036).toNumber(), _moonPhase);
+        var sun = _slots.sunTimes();
+        if (Settings.showSun && sun != null) {
+            Indicators.drawSun(dc, _c, _c - indicatorOffset + 8, (_size * 0.056).toNumber(), sun[0], sun[1], _sunNow, _slots.textFont());
         }
         if (Settings.showBattery) {
             Indicators.drawBattery(dc, _c, _c + indicatorOffset, _battery, _iconFont, _slots.textFont());

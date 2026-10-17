@@ -5,46 +5,60 @@ import Toybox.System;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-//! Fixed indicators: battery at 6 o'clock and moon phase at 12 o'clock.
+//! Fixed indicators: battery at 6 o'clock and the sun arc at 12 o'clock.
 module Indicators {
 
-    const SYNODIC_MONTH = 29.530588853d;
-    // Reference new moon: 2000-01-06 18:14 UTC
-    const NEW_MOON_EPOCH = 947182440;
+    // Quantization of the sun position: the arc is redrawn at most this many times per day
+    const SUN_STEPS = 36;
 
-    const MOON_LIT = 0xE6E6E6;
-    const MOON_DARK = 0x2E2E2E;
+    const SUN_COLOR = 0xFFC400;
 
-    //! Moon age as a fraction of the synodic month: 0 = new, 0.5 = full.
-    function moonPhase(unixSeconds as Number) as Float {
-        var days = (unixSeconds - NEW_MOON_EPOCH) / 86400.0d;
-        var cycles = days / SYNODIC_MONTH;
-        var p = cycles - Math.floor(cycles);
-        return p.toFloat();
+    //! Discrete sun state used to decide when the background needs a redraw:
+    //! -1 at night, 0..SUN_STEPS along the arc during the day.
+    function sunStep(rise as Number, set as Number, now as Number) as Number {
+        if (now < rise || now >= set || set <= rise) {
+            return -1;
+        }
+        return (now - rise) * SUN_STEPS / (set - rise);
     }
 
-    //! Draw the moon disc centered at (x, y) with radius r.
-    function drawMoon(dc as Dc, x as Number, y as Number, r as Number, phase as Float) as Void {
-        dc.setColor(MOON_DARK, Graphics.COLOR_TRANSPARENT);
-        dc.fillCircle(x, y, r);
+    //! Sun arc over a horizon, centered on the horizon point (x, y):
+    //! the dot travels the half-circle from sunrise (left) to sunset (right);
+    //! the next event time is printed below with an up/down arrow.
+    function drawSun(dc as Dc, x as Number, y as Number, r as Number, rise as Number, set as Number, now as Number, textFont as WatchUi.FontResource) as Void {
+        var step = sunStep(rise, set, now);
+        var day = step >= 0;
 
-        // Lit half: right side while waxing, left side while waning
-        dc.setColor(MOON_LIT, Graphics.COLOR_TRANSPARENT);
-        if (phase < 0.5) {
-            dc.setClip(x, y - r - 1, r + 2, 2 * r + 3);
+        dc.setPenWidth(2);
+        dc.setColor(day ? 0x8C8C8C : 0x3A3A3A, Graphics.COLOR_TRANSPARENT);
+        dc.drawArc(x, y, r, Graphics.ARC_COUNTER_CLOCKWISE, 0, 180);
+        dc.setColor(0x8C8C8C, Graphics.COLOR_TRANSPARENT);
+        dc.drawLine(x - r - 8, y, x + r + 9, y);
+
+        if (day) {
+            var a = Math.PI * (1.0 - step.toFloat() / SUN_STEPS);
+            dc.setColor(SUN_COLOR, Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(x + r * Math.cos(a), y - r * Math.sin(a), 4);
         } else {
-            dc.setClip(x - r - 1, y - r - 1, r + 1, 2 * r + 3);
+            // Below the horizon: a dim dot resting on the line
+            dc.setColor(0x5A5A5A, Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(x, y, 3);
         }
-        dc.fillCircle(x, y, r);
-        dc.clearClip();
 
-        // Terminator: an ellipse that hides (crescent) or extends (gibbous) the lit half
-        var k = Math.cos(2 * Math.PI * phase);
-        var rx = (r * k.abs()).toNumber();
-        if (rx > 0) {
-            dc.setColor(k > 0 ? MOON_DARK : MOON_LIT, Graphics.COLOR_TRANSPARENT);
-            dc.fillEllipse(x, y, rx, r);
+        // Next event: sunset while the sun is up, otherwise sunrise
+        var text = Slots.formatClock(day ? set : rise);
+        var arrowW = 8;
+        var gap = 3;
+        var w = arrowW + gap + dc.getTextWidthInPixels(text, textFont);
+        var left = x - w / 2;
+        var ty = y + 15;
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        if (day) {
+            dc.fillPolygon([[left, ty - 3], [left + arrowW, ty - 3], [left + arrowW / 2, ty + 4]]);
+        } else {
+            dc.fillPolygon([[left, ty + 3], [left + arrowW, ty + 3], [left + arrowW / 2, ty - 4]]);
         }
+        dc.drawText(left + arrowW + gap, ty, textFont, text, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
     //! Draw a lightning icon followed by the battery level (no % sign), centered on (x, y).

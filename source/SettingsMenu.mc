@@ -54,7 +54,7 @@ class SettingsMenu extends WatchUi.Menu2 {
             SettingsStrings.load(SettingsStrings.colorNames()[Settings.accentIndex]), "AccentColor", null));
         addItem(new WatchUi.ToggleMenuItem(SettingsStrings.load(Rez.Strings.ShowArcsTitle), null, "ShowArcs", Settings.showArcs, null));
         addItem(new WatchUi.ToggleMenuItem(SettingsStrings.load(Rez.Strings.ShowBatteryTitle), null, "ShowBattery", Settings.showBattery, null));
-        addItem(new WatchUi.ToggleMenuItem(SettingsStrings.load(Rez.Strings.ShowMoonTitle), null, "ShowMoon", Settings.showMoon, null));
+        addItem(new WatchUi.ToggleMenuItem(SettingsStrings.load(Rez.Strings.ShowSunTitle), null, "ShowSun", Settings.showSun, null));
     }
 }
 

@@ -7,5 +7,5 @@
     <property id="AccentColor" type="number">0</property>
     <property id="ShowArcs" type="boolean">false</property>
     <property id="ShowBattery" type="boolean">true</property>
-    <property id="ShowMoon" type="boolean">true</property>
+    <property id="ShowSun" type="boolean">true</property>
 </properties>

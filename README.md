@@ -4,7 +4,7 @@ An analog watch face for the **Forerunner 165 Music** (`fr165m`) in the style of
 
 - All 12 hour numerals, a minute tick ring, and white tapered hands. The second hand uses the accent color and can be hidden.
 - Four customizable slots at **2, 4, 8 and 10 o'clock**, each an icon plus value (optional progress arc, off by default). The defaults are date, floors climbed, temperature and weekly run distance.
-- Battery (lightning icon + level) at **6 o'clock** and moon phase at **12 o'clock**. Both can be turned off.
+- Battery (lightning icon + level) at **6 o'clock** and a sunrise/sunset arc at **12 o'clock** (the sun dot moves along the arc during the day; the next event time is shown below). Both can be turned off.
 - Tap a slot to open the matching Garmin widget.
 - Always-on mode: hour ticks, outline numerals and outline hands, shifted every minute against burn-in.
 
@@ -13,7 +13,7 @@ An analog watch face for the **Forerunner 165 Music** (`fr165m`) in the style of
 The FR165 has an AMOLED screen, so the OS never calls `onPartialUpdate`. The second hand can only show in high-power mode, which lasts a few seconds after a wrist raise or a touch.
 
 To keep drawing work low:
-- The dial, slots and indicators are drawn into one off-screen buffer, redrawn only when something on it visibly changes (a slot value, the battery level, the day or moon, a setting). The date is re-formatted once a day.
+- The dial, slots and indicators are drawn into one off-screen buffer, redrawn only when something on it visibly changes (a slot value, the battery level, the sun position step, a setting). The date is re-formatted once a day.
 - Each `onUpdate` (once a minute, or once a second in high power) copies that buffer and draws the hour and minute hands, plus the second hand when enabled.
 - Slot data comes from `Toybox.Complications` change callbacks. Nothing is polled on each second.
 

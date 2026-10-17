@@ -8,7 +8,7 @@
     <string id="AccentColorTitle">Accent color</string>
     <string id="ShowArcsTitle">Progress arcs</string>
     <string id="ShowBatteryTitle">Battery at 6 o&apos;clock</string>
-    <string id="ShowMoonTitle">Moon phase at 12 o&apos;clock</string>
+    <string id="ShowSunTitle">Sunrise / sunset at 12 o&apos;clock</string>
     <string id="SettingsTitle">Settings</string>
     <string id="SlotNone">None</string>
     <string id="SlotDate">Date</string>
