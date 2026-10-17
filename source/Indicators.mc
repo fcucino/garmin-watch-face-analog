@@ -48,8 +48,7 @@ module Indicators {
     }
 
     //! Draw a lightning icon followed by the battery level (no % sign), centered on (x, y).
-    function drawBattery(dc as Dc, x as Number, y as Number, iconFont as WatchUi.FontResource, textFont as WatchUi.FontResource) as Void {
-        var pct = System.getSystemStats().battery;
+    function drawBattery(dc as Dc, x as Number, y as Number, pct as Number, iconFont as WatchUi.FontResource, textFont as WatchUi.FontResource) as Void {
         var text = pct.format("%d");
         var iconW = 20; // visible width of the bolt glyph in its 26 px cell
         var gap = 2;

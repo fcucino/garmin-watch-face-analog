@@ -12,7 +12,8 @@ import Toybox.WatchUi;
 //!
 //! System data arrives through Complications change callbacks and is only
 //! cached here; nothing is read on the per-second tick. Values that have no
-//! complication (date, distance today) are polled once per minute.
+//! callback (distance today, next sunrise/sunset) are checked once per minute
+//! and the date once per day. `dirty` is set only when visible output changes.
 class Slots {
 
     // Clock positions of the slots, in hours
@@ -97,25 +98,30 @@ class Slots {
         } catch (e) {
             _raw[type] = null;
         }
-        // Only flag a redraw if a visible string actually changed
         for (var i = 0; i < 4; i++) {
-            var types = complicationTypes(Settings.slots[i]);
-            if (types.indexOf(type) >= 0) {
-                var old = _text[i];
+            if (complicationTypes(Settings.slots[i]).indexOf(type) >= 0) {
                 format(i);
-                if (!old.equals(_text[i])) {
-                    dirty = true;
-                }
             }
         }
     }
 
-    //! Re-format every slot. Called once per minute (also covers polled values).
+    //! Re-format every slot (after subscribing / settings change).
     function refresh() as Void {
         for (var i = 0; i < 4; i++) {
             format(i);
         }
         dirty = true;
+    }
+
+    //! Once-a-minute check of the values that have no change callback.
+    //! The date is only re-formatted when the day changes.
+    function poll(newDay as Boolean) as Void {
+        for (var i = 0; i < 4; i++) {
+            var kind = Settings.slots[i];
+            if (kind == Settings.SLOT_DISTANCE || kind == Settings.SLOT_SUN || (newDay && kind == Settings.SLOT_DATE)) {
+                format(i);
+            }
+        }
     }
 
     //! Draw all slots into dc.
@@ -303,9 +309,15 @@ class Slots {
                 break;
             }
         }
-        _text[i] = text;
-        _sub[i] = sub;
-        _progress[i] = progress;
+        // Only flag a redraw if something visible actually changed
+        var oldSub = _sub[i];
+        var subChanged = (sub == null) ? (oldSub != null) : (oldSub == null || !sub.equals(oldSub));
+        if (!text.equals(_text[i]) || subChanged || progress != _progress[i]) {
+            _text[i] = text;
+            _sub[i] = sub;
+            _progress[i] = progress;
+            dirty = true;
+        }
     }
 
     private static function capitalize(s as String) as String {

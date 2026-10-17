@@ -7,12 +7,13 @@ import Toybox.WatchUi;
 
 //! Galaxy Watch-style analog face.
 //!
-//! Battery strategy (AMOLED, no partial updates):
-//! - Everything except the second hand is rendered into one off-screen
-//!   "minute layer" only when the minute changes, slot data changes or
-//!   settings change.
-//! - A per-second tick (high power only) is one bitmap blit plus the
-//!   second hand; with the second hand disabled it is just the blit.
+//! Battery strategy (AMOLED, no partial updates). The OS calls onUpdate once
+//! a minute, or once a second in high power for a few seconds after a gesture:
+//! - The dial, slots and indicators live in one off-screen background that
+//!   is redrawn only when something on it visibly changes (slot value,
+//!   battery level, day/moon, settings). On a normal minute it is untouched.
+//! - Every onUpdate is one bitmap blit plus the hour/minute hands, plus the
+//!   second hand in high power when enabled.
 //! - Always-on mode draws a sparse outline face (<10% lit pixels) once per
 //!   minute, shifted every minute against burn-in.
 class GalaxyAnalogView extends WatchUi.WatchFace {
@@ -30,9 +31,10 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
     private var _sleeping as Boolean = false;
     private var _burnIn as Boolean = false;
     private var _lastMinute as Number = -1;
-    private var _layerDirty as Boolean = true;
+    private var _bgDirty as Boolean = true;
+    private var _day as Number = -1;
+    private var _battery as Number = -1;
     private var _moonPhase as Float = 0.0;
-    private var _moonHour as Number = -1;
 
     function initialize() {
         WatchFace.initialize();
@@ -54,12 +56,13 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         } catch (e) {
             // Fall back to drawing straight to the screen
         }
-        _layerDirty = true;
+        _bgDirty = true;
     }
 
     function onShow() as Void {
         _slots.subscribe();
-        _layerDirty = true;
+        _lastMinute = -1;
+        _bgDirty = true;
     }
 
     function onHide() as Void {
@@ -68,7 +71,7 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
 
     function onSettingsChanged() as Void {
         _slots.subscribe();
-        _layerDirty = true;
+        _bgDirty = true;
         WatchUi.requestUpdate();
     }
 
@@ -88,22 +91,23 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         var minute = t.hour * 60 + t.min;
         if (minute != _lastMinute) {
             _lastMinute = minute;
-            _slots.refresh();
+            pollMinute();
         }
         if (_slots.dirty) {
-            _layerDirty = true;
+            _bgDirty = true;
         }
 
         var buffer = _buffer;
         if (buffer != null) {
-            if (_layerDirty) {
-                renderMinuteLayer(buffer.getDc(), t);
+            if (_bgDirty) {
+                renderBackground(buffer.getDc());
             }
             dc.drawBitmap(0, 0, buffer);
         } else {
-            renderMinuteLayer(dc, t);
+            renderBackground(dc);
         }
 
+        drawHands(dc, t);
         if (!_sleeping && Settings.showSeconds) {
             drawSecondHand(dc, t.sec);
         }
@@ -118,9 +122,29 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         _sleeping = false;
     }
 
-    //! Dial, indicators, slots and hour/minute hands.
-    private function renderMinuteLayer(dc as Dc, t as System.ClockTime) as Void {
-        _layerDirty = false;
+    //! Once-a-minute cheap checks; each marks the background dirty only on a visible change.
+    private function pollMinute() as Void {
+        var day = Time.today().value();
+        var newDay = day != _day;
+        if (newDay) {
+            _day = day;
+            _moonPhase = Indicators.moonPhase(Time.now().value());
+            _bgDirty = true;
+        }
+        _slots.poll(newDay);
+
+        var battery = (System.getSystemStats().battery + 0.5).toNumber();
+        if (battery != _battery) {
+            _battery = battery;
+            if (Settings.showBattery) {
+                _bgDirty = true;
+            }
+        }
+    }
+
+    //! Dial, indicators and slots: everything that does not move every minute.
+    private function renderBackground(dc as Dc) as Void {
+        _bgDirty = false;
         _slots.dirty = false;
 
         if (dc has :setAntiAlias) {
@@ -131,21 +155,22 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
 
         _dial.draw(dc);
 
-        var accent = Settings.accent();
         var indicatorOffset = (_size * 0.30).toNumber();
         if (Settings.showMoon) {
-            if (t.hour != _moonHour) {
-                _moonHour = t.hour;
-                _moonPhase = Indicators.moonPhase(Time.now().value());
-            }
             Indicators.drawMoon(dc, _c, _c - indicatorOffset, (_size * 0.036).toNumber(), _moonPhase);
         }
         if (Settings.showBattery) {
-            Indicators.drawBattery(dc, _c, _c + indicatorOffset, _iconFont, _slots.textFont());
+            Indicators.drawBattery(dc, _c, _c + indicatorOffset, _battery, _iconFont, _slots.textFont());
         }
 
         _slots.draw(dc);
+    }
 
+    //! Hour and minute hands plus the center hub, drawn on top of the background.
+    private function drawHands(dc as Dc, t as System.ClockTime) as Void {
+        if (dc has :setAntiAlias) {
+            dc.setAntiAlias(true);
+        }
         var hourAngle = ((t.hour % 12) * 60 + t.min) * Math.PI / 360.0;
         var minuteAngle = t.min * Math.PI / 30.0;
         drawHand(dc, hourAngle, _size * 0.27, _size * 0.035, 16, 10);
@@ -153,7 +178,7 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(_c, _c, 8);
-        dc.setColor(accent, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Settings.accent(), Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(_c, _c, 4);
     }
 

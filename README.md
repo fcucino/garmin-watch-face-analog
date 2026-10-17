@@ -13,8 +13,8 @@ An analog watch face for the **Forerunner 165 Music** (`fr165m`) in the style of
 The FR165 has an AMOLED screen, so the OS never calls `onPartialUpdate`. The second hand can only show in high-power mode, which lasts a few seconds after a wrist raise or a touch.
 
 To keep drawing work low:
-- Everything except the second hand is drawn into one off-screen buffer. That buffer is redrawn only when the minute changes, a slot value changes, or a setting changes.
-- Each one-second tick copies that buffer to the screen and draws the second hand. With the second hand disabled, the tick is only the copy.
+- The dial, slots and indicators are drawn into one off-screen buffer, redrawn only when something on it visibly changes (a slot value, the battery level, the day or moon, a setting). The date is re-formatted once a day.
+- Each `onUpdate` (once a minute, or once a second in high power) copies that buffer and draws the hour and minute hands, plus the second hand when enabled.
 - Slot data comes from `Toybox.Complications` change callbacks. Nothing is polled on each second.
 
 ## Settings
