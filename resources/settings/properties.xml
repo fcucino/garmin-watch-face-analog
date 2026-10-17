@@ -1,0 +1,11 @@
+<properties>
+    <property id="Slot1" type="number">1</property>
+    <property id="Slot2" type="number">9</property>
+    <property id="Slot3" type="number">13</property>
+    <property id="Slot4" type="number">11</property>
+    <property id="ShowSeconds" type="boolean">true</property>
+    <property id="AccentColor" type="number">0</property>
+    <property id="ShowArcs" type="boolean">false</property>
+    <property id="ShowBattery" type="boolean">true</property>
+    <property id="ShowMoon" type="boolean">true</property>
+</properties>

@@ -1,0 +1,37 @@
+<strings>
+    <string id="AppName">Galaxy Analog</string>
+    <string id="Slot1Title">Slot at 2 o&apos;clock</string>
+    <string id="Slot2Title">Slot at 4 o&apos;clock</string>
+    <string id="Slot3Title">Slot at 8 o&apos;clock</string>
+    <string id="Slot4Title">Slot at 10 o&apos;clock</string>
+    <string id="ShowSecondsTitle">Show second hand</string>
+    <string id="AccentColorTitle">Accent color</string>
+    <string id="ShowArcsTitle">Progress arcs</string>
+    <string id="ShowBatteryTitle">Battery at 6 o&apos;clock</string>
+    <string id="ShowMoonTitle">Moon phase at 12 o&apos;clock</string>
+    <string id="SettingsTitle">Settings</string>
+    <string id="SlotNone">None</string>
+    <string id="SlotDate">Date</string>
+    <string id="SlotBattery">Battery</string>
+    <string id="SlotSteps">Steps</string>
+    <string id="SlotHeartRate">Heart rate</string>
+    <string id="SlotCalories">Calories</string>
+    <string id="SlotBodyBattery">Body Battery</string>
+    <string id="SlotStress">Stress</string>
+    <string id="SlotNotifications">Notifications</string>
+    <string id="SlotFloors">Floors climbed</string>
+    <string id="SlotDistance">Distance today</string>
+    <string id="SlotWeeklyRun">Weekly run distance</string>
+    <string id="SlotSun">Sunrise / Sunset</string>
+    <string id="SlotTemperature">Temperature</string>
+    <string id="SlotIntensityMin">Intensity minutes</string>
+    <string id="ColorRed">Red</string>
+    <string id="ColorOrange">Orange</string>
+    <string id="ColorYellow">Yellow</string>
+    <string id="ColorGreen">Green</string>
+    <string id="ColorCyan">Cyan</string>
+    <string id="ColorBlue">Blue</string>
+    <string id="ColorPurple">Purple</string>
+    <string id="ColorPink">Pink</string>
+    <string id="ColorWhite">White</string>
+</strings>
