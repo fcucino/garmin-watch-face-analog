@@ -56,9 +56,14 @@ class Dial {
         drawNumerals(dc, _font, 0, 0);
     }
 
-    //! Sparse outline numerals for always-on mode, shifted by (dx, dy).
+    //! Sparse always-on dial (hour ticks + outline numerals), shifted by (dx, dy).
     function drawAod(dc as Dc, dx as Number, dy as Number) as Void {
         dc.setColor(0x8C8C8C, Graphics.COLOR_TRANSPARENT);
+        dc.setPenWidth(2);
+        for (var i = 0; i < 60; i += 5) {
+            var t = _ticks[i];
+            dc.drawLine(t[0] + dx, t[1] + dy, t[2] + dx, t[3] + dy);
+        }
         drawNumerals(dc, _aodFont, dx, dy);
     }
 

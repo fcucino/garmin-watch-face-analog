@@ -23,6 +23,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "resources", "fonts")
 
 NUMERAL_SIZE = 32  # px, font size of the dial numerals
+NUMERAL_GAP = 2  # px between digits of "10", "11", "12"
 SMALL_SIZE = 19  # px, font size of the slot text
 ICON_SIZE = 26  # px, icon cell
 SUPERSAMPLE = 8
@@ -73,22 +74,31 @@ def write_bmfont(name, glyphs, line_height, base):
 
 
 def numeral_glyphs(ttf, outline):
+    """Render digits on a roomy canvas and crop to the real ink, so outline
+    strokes are never clipped; lineHeight covers the tallest/deepest glyph."""
     font = ImageFont.truetype(ttf, NUMERAL_SIZE)
     stroke = 2 if outline else 0
-    boxes = {ch: font.getbbox(ch, anchor="ls", stroke_width=stroke) for ch in "0123456789"}
-    base = max(-b[1] for b in boxes.values())
-    glyphs = []
-    for ch, (x0, y0, x1, y1) in boxes.items():
-        w, h = x1 - x0, y1 - y0
-        img = Image.new("L", (w, h), 0)
+    pad = NUMERAL_SIZE
+    origin = (pad, pad + NUMERAL_SIZE)  # baseline position on the canvas
+    rendered = []
+    for ch in "0123456789":
+        img = Image.new("L", (NUMERAL_SIZE * 3, NUMERAL_SIZE * 3), 0)
         d = ImageDraw.Draw(img)
         if outline:
-            d.text((-x0, -y0), ch, font=font, anchor="ls", fill=255, stroke_width=stroke, stroke_fill=255)
-            d.text((-x0, -y0), ch, font=font, anchor="ls", fill=0)
+            d.text(origin, ch, font=font, anchor="ls", fill=255, stroke_width=stroke, stroke_fill=255)
+            d.text(origin, ch, font=font, anchor="ls", fill=0)
         else:
-            d.text((-x0, -y0), ch, font=font, anchor="ls", fill=255)
-        glyphs.append((ch, img, x0, base + y0, round(font.getlength(ch))))
-    return glyphs, base
+            d.text(origin, ch, font=font, anchor="ls", fill=255)
+        x0, y0, x1, y1 = img.getbbox()
+        rendered.append((ch, img.crop((x0, y0, x1, y1)), x0 - origin[0], y0 - origin[1], y1 - origin[1]))
+    ascent = max(-top for _, _, _, top, _ in rendered)
+    descent = max(max(bottom for _, _, _, _, bottom in rendered), 0)
+    glyphs = []
+    # Advance = ink width + fixed gap, no side bearings: centered text then
+    # centers the visible ink, identically for the filled and outline fonts.
+    for ch, img, _, top, _ in rendered:
+        glyphs.append((ch, img, 0, ascent + top, img.size[0] + NUMERAL_GAP))
+    return glyphs, ascent + descent, ascent
 
 
 def text_glyphs(ttf, chars):
@@ -249,10 +259,10 @@ def icon_glyphs():
 def main():
     ttf = sys.argv[1] if len(sys.argv) > 1 else default_ttf()
     os.makedirs(OUT, exist_ok=True)
-    glyphs, base = numeral_glyphs(ttf, outline=False)
-    write_bmfont("numerals", glyphs, base, base)
-    glyphs, base = numeral_glyphs(ttf, outline=True)
-    write_bmfont("numerals_aod", glyphs, base, base)
+    glyphs, line, base = numeral_glyphs(ttf, outline=False)
+    write_bmfont("numerals", glyphs, line, base)
+    glyphs, line, base = numeral_glyphs(ttf, outline=True)
+    write_bmfont("numerals_aod", glyphs, line, base)
     glyphs, line, base = text_glyphs(ttf, [chr(c) for c in range(32, 127)] + ["\u00b0"])
     write_bmfont("small", glyphs, line, base)
     write_bmfont("icons", icon_glyphs(), ICON_SIZE, ICON_SIZE)

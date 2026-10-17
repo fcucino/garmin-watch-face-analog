@@ -6,7 +6,7 @@ An analog watch face for the **Forerunner 165 Music** (`fr165m`) in the style of
 - Four customizable slots at **2, 4, 8 and 10 o'clock**, each an icon plus value (optional progress arc, off by default). The defaults are date, floors climbed, temperature and weekly run distance.
 - Battery (lightning icon + level) at **6 o'clock** and moon phase at **12 o'clock**. Both can be turned off.
 - Tap a slot to open the matching Garmin widget.
-- Always-on mode: outline numerals and hands, shifted every minute against burn-in.
+- Always-on mode: hour ticks, outline numerals and outline hands, shifted every minute against burn-in.
 
 ## Battery behaviour
 
