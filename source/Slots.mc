@@ -10,10 +10,12 @@ import Toybox.WatchUi;
 
 //! The four customizable data slots (2, 4, 8 and 10 o'clock).
 //!
-//! System data arrives through Complications change callbacks and is only
-//! cached here; nothing is read on the per-second tick. Values that have no
-//! callback (distance today, next sunrise/sunset) are checked once per minute
-//! and the date once per day. `dirty` is set only when visible output changes.
+//! Values are read with Complications.getComplication once per minute
+//! (poll), never on the per-second tick and without change callbacks: fast
+//! changing data (heart rate, steps, stress) would otherwise wake the app
+//! many times a minute while the screen shows it once a minute at most.
+//! The date is re-formatted once a day. `dirty` is set only when visible
+//! output changes.
 class Slots {
 
     // Clock positions of the slots, in hours
@@ -34,6 +36,7 @@ class Slots {
 
     private var _iconFont as FontResource;
     private var _textFont as FontResource;
+    private var _ids as Array<Complications.Id> = [] as Array<Complications.Id>;
     private var _raw as Dictionary<Number, Object?> = {} as Dictionary<Number, Object?>;
     private var _text as Array<String> = ["", "", "", ""] as Array<String>;
     // Optional second text line (date: weekday)
@@ -62,33 +65,41 @@ class Slots {
         }
     }
 
-    //! (Re)subscribe to the complications needed by the current settings.
-    function subscribe() as Void {
-        Complications.registerComplicationChangeCallback(method(:onComplicationChanged));
-        Complications.unsubscribeFromAllUpdates();
+    //! Collect the complications needed by the current settings and read them.
+    function configure() as Void {
+        _ids = [] as Array<Complications.Id>;
         _raw = {} as Dictionary<Number, Object?>;
         var types = [] as Array<Complications.Type>;
         for (var i = 0; i < 4; i++) {
             types.addAll(complicationTypes(Settings.slots[i]));
         }
         if (Settings.showSun) {
-            // The 12 o'clock sun arc shares the callback with the slots
+            // The 12 o'clock sun arc reads the same data as the sun slot
             types.addAll(complicationTypes(Settings.SLOT_SUN));
         }
         for (var t = 0; t < types.size(); t++) {
             var type = types[t];
-            if (_raw.hasKey(type)) {
-                continue;
-            }
-            var id = new Complications.Id(type);
-            try {
-                _raw[type] = Complications.getComplication(id).value;
-                Complications.subscribeToUpdates(id);
-            } catch (e) {
+            if (!_raw.hasKey(type)) {
                 _raw[type] = null;
+                _ids.add(new Complications.Id(type));
             }
         }
-        refresh();
+        readAll();
+        for (var i = 0; i < 4; i++) {
+            format(i);
+        }
+        dirty = true;
+    }
+
+    //! Once-a-minute refresh: read the complications, re-format the slots.
+    //! The date is only re-formatted when the day changes.
+    function poll(newDay as Boolean) as Void {
+        readAll();
+        for (var i = 0; i < 4; i++) {
+            if (newDay || Settings.slots[i] != Settings.SLOT_DATE) {
+                format(i);
+            }
+        }
     }
 
     //! Today's [sunrise, sunset] in seconds since local midnight, or null if unknown.
@@ -101,44 +112,15 @@ class Slots {
         return [rise.toNumber(), set.toNumber()];
     }
 
-    function unsubscribe() as Void {
-        Complications.unsubscribeFromAllUpdates();
-        Complications.registerComplicationChangeCallback(null);
-    }
-
-    function onComplicationChanged(id as Complications.Id) as Void {
-        var type = id.getType();
-        try {
-            _raw[type] = Complications.getComplication(id).value;
-        } catch (e) {
-            _raw[type] = null;
-        }
-        for (var i = 0; i < 4; i++) {
-            if (complicationTypes(Settings.slots[i]).indexOf(type) >= 0) {
-                format(i);
+    private function readAll() as Void {
+        for (var i = 0; i < _ids.size(); i++) {
+            var id = _ids[i];
+            var value = null;
+            try {
+                value = Complications.getComplication(id).value;
+            } catch (e) {
             }
-        }
-        if (Settings.showSun && (type == Complications.COMPLICATION_TYPE_SUNRISE || type == Complications.COMPLICATION_TYPE_SUNSET)) {
-            dirty = true;
-        }
-    }
-
-    //! Re-format every slot (after subscribing / settings change).
-    function refresh() as Void {
-        for (var i = 0; i < 4; i++) {
-            format(i);
-        }
-        dirty = true;
-    }
-
-    //! Once-a-minute check of the values that have no change callback.
-    //! The date is only re-formatted when the day changes.
-    function poll(newDay as Boolean) as Void {
-        for (var i = 0; i < 4; i++) {
-            var kind = Settings.slots[i];
-            if (kind == Settings.SLOT_DISTANCE || kind == Settings.SLOT_SUN || (newDay && kind == Settings.SLOT_DATE)) {
-                format(i);
-            }
+            _raw[id.getType()] = value;
         }
     }
 

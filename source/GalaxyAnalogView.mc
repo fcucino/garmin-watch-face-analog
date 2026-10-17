@@ -13,7 +13,9 @@ import Toybox.WatchUi;
 //!   is redrawn only when something on it visibly changes (slot value,
 //!   battery level, sun arc step, settings). On a normal minute it is untouched.
 //! - Every onUpdate is one bitmap blit plus the hour/minute hands, plus the
-//!   second hand in high power when enabled.
+//!   second hand in high power when enabled. Every call must draw a full
+//!   frame: the FR165 does not keep the previous frame between calls.
+//! - Slot data is read once a minute, never through change callbacks.
 //! - Always-on mode draws a sparse outline face (<10% lit pixels) once per
 //!   minute, shifted every minute against burn-in.
 class GalaxyAnalogView extends WatchUi.WatchFace {
@@ -61,17 +63,13 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
     }
 
     function onShow() as Void {
-        _slots.subscribe();
+        _slots.configure();
         _lastMinute = -1;
         _bgDirty = true;
     }
 
-    function onHide() as Void {
-        _slots.unsubscribe();
-    }
-
     function onSettingsChanged() as Void {
-        _slots.subscribe();
+        _slots.configure();
         _bgDirty = true;
         WatchUi.requestUpdate();
     }

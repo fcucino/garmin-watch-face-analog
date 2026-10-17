@@ -15,7 +15,7 @@ The FR165 has an AMOLED screen, so the OS never calls `onPartialUpdate`. The sec
 To keep drawing work low:
 - The dial, slots and indicators are drawn into one off-screen buffer, redrawn only when something on it visibly changes (a slot value, the battery level, the sun position step, a setting). The date is re-formatted once a day.
 - Each `onUpdate` (once a minute, or once a second in high power) copies that buffer and draws the hour and minute hands, plus the second hand when enabled.
-- Slot data comes from `Toybox.Complications` change callbacks. Nothing is polled on each second.
+- Slot data is read from `Toybox.Complications` once a minute (no change callbacks, which would wake the app many times a minute for heart rate or steps). Nothing is read on the per-second ticks.
 
 ## Settings
 
