@@ -1,5 +1,7 @@
 # Galaxy Analog — Garmin watch face
 
+![Galaxy Analog Watch Face](screenshot.png)
+
 An analog watch face for the **Forerunner 165 Music** (`fr165m`) in the style of the Galaxy Watch 4 classic analog face.
 
 - All 12 hour numerals, a minute tick ring, and white tapered hands. The second hand uses the accent color and can be hidden.
