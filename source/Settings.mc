@@ -42,6 +42,7 @@ module Settings {
     var slots as Array<Number> = [SLOT_DATE, SLOT_FLOORS, SLOT_TEMPERATURE, SLOT_WEEKLY_RUN] as Array<Number>;
     var showSeconds as Boolean = true;
     var accentIndex as Number = 0;
+    var accentColor as Number = ACCENT_COLORS[0];
     var showArcs as Boolean = false;
     var showBattery as Boolean = true;
     var showSun as Boolean = true;
@@ -56,13 +57,10 @@ module Settings {
         if (accentIndex < 0 || accentIndex >= ACCENT_COLORS.size()) {
             accentIndex = 0;
         }
+        accentColor = ACCENT_COLORS[accentIndex];
         showArcs = readBoolean("ShowArcs", false);
         showBattery = readBoolean("ShowBattery", true);
         showSun = readBoolean("ShowSun", true);
-    }
-
-    function accent() as Number {
-        return ACCENT_COLORS[accentIndex];
     }
 
     function readNumber(key as String, def as Number) as Number {

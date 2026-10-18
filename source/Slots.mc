@@ -126,7 +126,7 @@ class Slots {
 
     //! Draw all slots into dc.
     function draw(dc as Dc) as Void {
-        var accent = Settings.accent();
+        var accent = Settings.accentColor;
         for (var i = 0; i < 4; i++) {
             var kind = Settings.slots[i];
             if (kind == Settings.SLOT_NONE) {

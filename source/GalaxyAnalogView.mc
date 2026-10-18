@@ -13,7 +13,8 @@ import Toybox.WatchUi;
 //!   is redrawn only when something on it visibly changes (slot value,
 //!   battery level, sun arc step, settings). On a normal minute it is untouched.
 //! - Every onUpdate is one bitmap blit plus the hour/minute hands, plus the
-//!   second hand in high power when enabled. Every call must draw a full
+//!   second hand in high power when enabled. The hour/minute hand shapes are
+//!   computed once a minute; only the second hand is computed per frame. Every call must draw a full
 //!   frame: the FR165 does not keep the previous frame between calls.
 //! - Slot data is read once a minute, never through change callbacks.
 //! - Always-on mode draws a sparse outline face (<10% lit pixels) once per
@@ -39,6 +40,9 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
     private var _sunStep as Number = -2;
     private var _sunNow as Number = 0;
 
+    // Hour/minute hand shapes for the current minute: outline, fill, outline, fill
+    private var _hands as Array<Array<[Float, Float]> >? = null;
+
     function initialize() {
         WatchFace.initialize();
         var settings = System.getDeviceSettings();
@@ -59,6 +63,7 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         } catch (e) {
             // Fall back to drawing straight to the screen
         }
+        _lastMinute = -1;
         _bgDirty = true;
     }
 
@@ -90,7 +95,8 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         var minute = t.hour * 60 + t.min;
         if (minute != _lastMinute) {
             _lastMinute = minute;
-            pollMinute();
+            pollMinute(t);
+            computeHands(t);
         }
         if (_slots.dirty) {
             _bgDirty = true;
@@ -122,7 +128,7 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
     }
 
     //! Once-a-minute cheap checks; each marks the background dirty only on a visible change.
-    private function pollMinute() as Void {
+    private function pollMinute(t as System.ClockTime) as Void {
         var day = Time.today().value();
         var newDay = day != _day;
         if (newDay) {
@@ -131,7 +137,6 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         _slots.poll(newDay);
 
         // Sun arc: redraw only when the dot moves to the next step or day/night flips
-        var t = System.getClockTime();
         _sunNow = t.hour * 3600 + t.min * 60;
         var sun = _slots.sunTimes();
         var step = sun != null ? Indicators.sunStep(sun[0], sun[1], _sunNow) : -2;
@@ -176,28 +181,42 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
         _slots.draw(dc);
     }
 
+    //! Solid tapered white hour/minute hands, each with a thin black outline so
+    //! it reads over slots. Recomputed only when the minute changes.
+    private function computeHands(t as System.ClockTime) as Void {
+        var hourAngle = ((t.hour % 12) * 60 + t.min) * Math.PI / 360.0;
+        var minuteAngle = t.min * Math.PI / 30.0;
+        var hourLen = _size * 0.27;
+        var minuteLen = _size * 0.42;
+        var tail = _size * 0.035;
+        _hands = [
+            handPolygon(_c, _c, hourAngle, hourLen + 2, tail + 2, 20, 14),
+            handPolygon(_c, _c, hourAngle, hourLen, tail, 16, 10),
+            handPolygon(_c, _c, minuteAngle, minuteLen + 2, tail + 2, 16, 11),
+            handPolygon(_c, _c, minuteAngle, minuteLen, tail, 12, 7)
+        ];
+    }
+
     //! Hour and minute hands plus the center hub, drawn on top of the background.
     private function drawHands(dc as Dc, t as System.ClockTime) as Void {
         if (dc has :setAntiAlias) {
             dc.setAntiAlias(true);
         }
-        var hourAngle = ((t.hour % 12) * 60 + t.min) * Math.PI / 360.0;
-        var minuteAngle = t.min * Math.PI / 30.0;
-        drawHand(dc, hourAngle, _size * 0.27, _size * 0.035, 16, 10);
-        drawHand(dc, minuteAngle, _size * 0.42, _size * 0.035, 12, 7);
+        if (_hands == null) {
+            computeHands(t);
+        }
+        var hands = _hands as Array<Array<[Float, Float]> >;
+        for (var i = 0; i < 4; i += 2) {
+            dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
+            dc.fillPolygon(hands[i]);
+            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+            dc.fillPolygon(hands[i + 1]);
+        }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(_c, _c, 8);
-        dc.setColor(Settings.accent(), Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Settings.accentColor, Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(_c, _c, 4);
-    }
-
-    //! Solid tapered white hand with a thin black outline so it reads over slots.
-    private function drawHand(dc as Dc, angle as Float, length as Float, tail as Float, wBase as Number, wTip as Number) as Void {
-        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
-        dc.fillPolygon(handPolygon(_c, _c, angle, length + 2, tail + 2, wBase + 4, wTip + 4));
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        dc.fillPolygon(handPolygon(_c, _c, angle, length, tail, wBase, wTip));
     }
 
     private function drawSecondHand(dc as Dc, sec as Number) as Void {
@@ -205,7 +224,7 @@ class GalaxyAnalogView extends WatchUi.WatchFace {
             dc.setAntiAlias(true);
         }
         var angle = sec * Math.PI / 30.0;
-        dc.setColor(Settings.accent(), Graphics.COLOR_TRANSPARENT);
+        dc.setColor(Settings.accentColor, Graphics.COLOR_TRANSPARENT);
         dc.fillPolygon(handPolygon(_c, _c, angle, _size * 0.46, _size * 0.09, 4, 3));
         dc.fillCircle(_c, _c, 6);
         dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
